@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SymptomService {
   final _storage = const FlutterSecureStorage();
-  static const String _baseUrl = 'http://192.168.0.101:5000'; // ✅ CORRECT - Added :5000; // For Android Emulator
+  static const String _baseUrl = 'http://10.0.2.2:5000'; // ✅ CORRECT - Added :5000; // For Android Emulator
 
   Future<String> analyzeSymptom(String symptomText) async {
     // Get the authentication token from secure storage
