@@ -10,6 +10,7 @@ import 'screens/get_started.dart';
 import 'screens/login_page.dart';
 import 'screens/login_as.dart';
 import 'screens/profile_page.dart';
+import 'screens/signup_page.dart';
 
 // 3. Import the AI screen (since it's a separate route)
 import 'screens/ai_symptom_checker_two.dart';
@@ -51,6 +52,7 @@ class MyApp extends StatelessWidget {
         '/get_started': (context) => WelcomeScreen(),
         '/login': (context) => LoginPage(),
         '/login_as': (context) => LoginScreen(),
+        '/signup': (context) => SignUpPage(),
 
         // --- Main App Shell ---
         // This is the new route for your entire logged-in experience
