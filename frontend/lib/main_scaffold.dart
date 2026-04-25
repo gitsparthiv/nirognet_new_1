@@ -1,37 +1,24 @@
 // lib/main_scaffold.dart
 import 'package:flutter/material.dart';
 
-// 1. Import all the screens for the nav bar
-// (Use the correct paths from your project)
+// Screens
 import 'screens/homepage.dart';
 import 'screens/book_consultation_page.dart';
-// Import your other screens as you create them
-// import 'screens/medicine_availability.dart'; 
-// import 'screens/health_records.dart';
+import 'screens/medicine_availability.dart';
 
-// --- Placeholders for screens you haven't made yet ---
-// You can create these files later, just like we did for Home
-class MedicineScreen extends StatelessWidget {
-  const MedicineScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(title: const Text("Medicine Availability")),
-        body: const Center(child: Text("Medicine Availability Screen")));
-  }
-}
-
+// --- Placeholder (only for Health Records) ---
 class RecordsScreen extends StatelessWidget {
   const RecordsScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: const Text("Health Records")),
-        body: const Center(child: Text("Health Records Screen")));
+      appBar: AppBar(title: const Text("Health Records")),
+      body: const Center(child: Text("Health Records Screen")),
+    );
   }
 }
-// --- End of Placeholders ---
-
+// --- End Placeholder ---
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -43,74 +30,52 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
-  // 2. Create the list of screens
-  static const List<Widget> _screens = <Widget>[
-    HomeScreen(), // Index 0
-    BookConsultationScreen(), // Index 1
-    // Index 2 is the AI Checker, handled separately
-    MedicineScreen(), // Index 3
-    RecordsScreen(), // Index 4
+  // Screens list (AI not included)
+  static final List<Widget> _screens = <Widget>[
+    const HomeScreen(),                 // 0
+    const BookConsultationScreen(),     // 1
+    MedicineAvailabilityPage(),         // 2 (actual index after shift)
+    const RecordsScreen(),              // 3
   ];
 
-  // 3. This method now handles all navigation
   void _onItemTapped(int index) {
-    // SPECIAL CASE: Handle the AI Symptom Checker
+    // AI Symptom Checker (separate route)
     if (index == 2) {
-      // Use pushNamed to open it as a new, separate page
-      // This will NOT have the bottom nav bar
       Navigator.pushNamed(context, '/ai_symptom');
-      
-      // We don't change the state, so the tab selection remains on 
-      // the previous screen (e.g., Home). This is usually desired.
-      // If you want the "Home" tab to be re-selected, you could add:
-      // setState(() => _selectedIndex = 0); 
-    } 
-    // Handle all other tabs
-    else {
-      // We need to adjust the index for our list,
-      // since the AI checker (index 2) isn't in it.
-      int listIndex = index;
-      if (index > 2) {
-        listIndex = index - 1; // e.g., Tab 3 maps to list item 2
-      }
-
-      setState(() {
-        _selectedIndex = index; // This controls the highlighted tab
-      });
-
-      // Note: We are no longer using a PageView or IndexedStack here
-      // for simplicity. Re-building with the new screen.
-      // A more optimized way would be to use an IndexedStack.
+      return;
     }
+
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
-  // Helper to get the correct screen from the list
   Widget _getCurrentScreen() {
     int listIndex = _selectedIndex;
+
+    // Adjust index because AI (2) is not in list
     if (_selectedIndex > 2) {
       listIndex = _selectedIndex - 1;
     }
+
     return _screens[listIndex];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 4. The body is now the screen from our list
       body: _getCurrentScreen(),
-      // 5. This is the persistent Bottom Nav Bar
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
-  // This is the nav bar code from your original homepage.dart
   Widget _buildBottomNavigationBar() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(30.0),
-          topRight: Radius.circular(30.0),
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
         ),
         boxShadow: [
           BoxShadow(
@@ -123,7 +88,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       child: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped, // This calls our new logic
+        onTap: _onItemTapped,
         backgroundColor: Colors.transparent,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
