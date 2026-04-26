@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';   //change1- import secure storage
 import '../services/auth_service.dart'; // ✅ Import AuthService
 //import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // ✅ For storing token
 
@@ -19,7 +20,23 @@ class _LoginPageState extends State<LoginPage> {
 
   // ✅ Initialize services
   final _authService = AuthService();
-  // final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage();   //change 2 - uncommented this line
+
+  //change 4- autologin check 
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    String? token = await _storage.read(key: 'access_token');
+
+    if (token != null && mounted) {
+      Navigator.pushReplacementNamed(context, '/main');
+    }
+  }
+
 
   @override
   void dispose() {
@@ -46,14 +63,14 @@ class _LoginPageState extends State<LoginPage> {
     try {
       print('🔵 Attempting login for: $email');
 
-      // Call backend to login
+       
       String token = await _authService.login(email, password);
 
       print('✅ Login successful! Token received.');
 
-      // Save token securely
-      // await _storage.write(key: 'access_token', value: token);
-      //print('✅ Token saved to secure storage');
+// ✅ SAVE TOKEN HERE
+      await _storage.write(key: 'access_token', value: token);
+      print('✅ Token saved to secure storage');
 
       if (mounted) {
         ScaffoldMessenger.of(
