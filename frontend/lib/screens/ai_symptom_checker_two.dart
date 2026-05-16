@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cura/services/symptom_service.dart'; // Make sure the path is correct
+import 'package:cura/services/symptom_service.dart';
+import 'dart:io';
+// Make sure the path is correct
 class AISymptomChecker extends StatefulWidget {
   const AISymptomChecker({super.key});
 
@@ -14,6 +16,10 @@ class _AISymptomCheckerState extends State<AISymptomChecker> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
+
+  List<File> uploadedFiles = [];
+ 
+ 
 
   // Suggested quick replies
   List<String> _suggestedReplies = [

@@ -109,22 +109,22 @@ class _EmergencyAssessmentPageState extends State<EmergencyAssessmentPage> {
 
   AssessmentResult computeAssessment() {
     int urgentScore = 0;
-    if (answers[1] == 2)
+    if (answers[1] == 2) {
       urgentScore += 5;
-    else if (answers[1] == 1)
+    } else if (answers[1] == 1)
       urgentScore += 2;
-    if (answers[2] == 2)
+    if (answers[2] == 2) {
       urgentScore += 6;
-    else if (answers[2] == 1)
+    } else if (answers[2] == 1)
       urgentScore += 3;
-    if (answers[3] == 2)
+    if (answers[3] == 2) {
       urgentScore += 5;
-    else if (answers[3] == 1)
+    } else if (answers[3] == 1)
       urgentScore += 1;
     if (answers[4] == 2) urgentScore += 2;
-    if (answers[5] == 2)
+    if (answers[5] == 2) {
       urgentScore += 5;
-    else if (answers[5] == 1)
+    } else if (answers[5] == 1)
       urgentScore += 3;
 
     if (urgentScore >= 8) {

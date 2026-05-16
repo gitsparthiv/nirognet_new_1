@@ -52,15 +52,16 @@ class MyApp extends StatelessWidget {
         '/login_as': (context) => LoginScreen(),
         '/signup': (context) => SignUpPage(),
 
-        // --- Main App ---
-        '/main': (context) => const MainScaffold(),
 
-        // --- Other Screens ---
-        '/ai_symptom': (context) => AISymptomChecker(),
-        '/profile': (context) => ProfilePage(),
-        '/emergency_assistant': (context) => EmergencyAssistantPage(),
-        'emergency_assistance_offline': (context) =>
-            EmergencyAssessmentPage(),
+        // --- Main App ---
+
+
+// --- Other Screens ---
+'/ai_symptom': (context) => AISymptomChecker(),
+'/profile': (context) => ProfilePage(),
+'/emergency_assistant': (context) => EmergencyAssistantPage(),
+'emergency_assistance_offline': (context) =>
+    EmergencyAssessmentPage(),
       },
     );
   }

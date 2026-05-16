@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'screens/homepage.dart';
 import 'screens/book_consultation_page.dart';
 import 'screens/medicine_availability.dart';
+import 'screens/health_records_page.dart';
 
-// --- Placeholder (only for Health Records) ---
 class RecordsScreen extends StatelessWidget {
   const RecordsScreen({super.key});
 
@@ -18,10 +18,14 @@ class RecordsScreen extends StatelessWidget {
     );
   }
 }
-// --- End Placeholder ---
 
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
+  final String token;
+
+  const MainScaffold({
+    super.key,
+    required this.token,
+  });
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
@@ -31,12 +35,18 @@ class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
   // Screens list (AI not included)
-  static final List<Widget> _screens = <Widget>[
-    const HomeScreen(),                 // 0
-    const BookConsultationScreen(),     // 1
-    MedicineAvailabilityPage(),         // 2 (actual index after shift)
-    const RecordsScreen(),              // 3
+  late final List<Widget> _screens;
+    @override
+void initState() {
+  super.initState();
+
+  _screens = [
+    const HomeScreen(),
+    BookConsultationScreen(token: widget.token),
+    MedicineAvailabilityPage(),
+    const HealthRecordsPage(),
   ];
+}
 
   void _onItemTapped(int index) {
     // AI Symptom Checker (separate route)

@@ -1,30 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'specialty_doctors_screen.dart';
+import 'package:http/http.dart' as http;
 
-// --- 1. Data Models ---
-class Specialty {
-  final IconData icon;
-  final String name;
+import '../models/specialty.dart';
+import '../models/doctor.dart';
+import 'book_consultation_specialty.dart';
+import 'profile_page.dart';
+import '../main_scaffold.dart';
 
-  const Specialty({required this.icon, required this.name});
-}
-
-const List<Specialty> kMedicalSpecialties = [
-  Specialty(icon: Icons.favorite, name: 'Cardiology'),
-  Specialty(icon: FontAwesomeIcons.bacteria, name: 'Dermatology'),
-  Specialty(icon: FontAwesomeIcons.bone, name: 'Orthopedics'),
-  Specialty(icon: Icons.psychology, name: 'Neurology'),
-  Specialty(icon: Icons.child_care, name: 'Pediatrics'),
-  Specialty(icon: Icons.woman, name: 'Gynecology'),
-  Specialty(icon: Icons.remove_red_eye, name: 'Ophthalmology'),
-  Specialty(icon: FontAwesomeIcons.brain, name: 'Psychiatry'),
-  Specialty(icon: FontAwesomeIcons.stethoscope, name: 'General Medicine'),
-  Specialty(icon: FontAwesomeIcons.tooth, name: 'Dentistry'),
-];
-
-// --- 2. Reusable Widgets ---
 class InfoChip extends StatelessWidget {
   final String text;
   const InfoChip({super.key, required this.text});
@@ -37,7 +21,7 @@ class InfoChip extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(25),
         boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2)),
+          BoxShadow(color: Colors.black26, blurRadius: 4),
         ],
       ),
       child: Text(
@@ -45,7 +29,7 @@ class InfoChip extends StatelessWidget {
         textAlign: TextAlign.center,
         style: GoogleFonts.poppins(
           fontSize: 14,
-          color: Colors.black87,
+          color: Colors.blueAccent,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -53,211 +37,428 @@ class InfoChip extends StatelessWidget {
   }
 }
 
-// --- 3. Main Home Screen ---
-class BookConsultationScreen extends StatelessWidget {
-  const BookConsultationScreen({super.key});
+class BookConsultationScreen extends StatefulWidget {
+  final String token;
 
+  const BookConsultationScreen({
+    super.key,
+    required this.token,
+  });
+
+  @override
+  State<BookConsultationScreen> createState() =>
+      _BookConsultationScreenState();
+}
+
+class _BookConsultationScreenState
+    extends State<BookConsultationScreen> {
+  List<Specialty> specialties = [];
+  List<Specialty> filteredSpecialties = [];
+
+  List<Doctor> allDoctors = [];
+  List<Doctor> filteredDoctors = [];
+
+  bool isLoading = true;
+  bool showDoctorResults = false;
+
+  final TextEditingController searchController =
+      TextEditingController();
+
+
+  @override
+  void initState() {
+    super.initState();
+    fetchSpecialties().then((_) {
+      fetchAllDoctors();
+    });
+  }
+
+  // ================= FETCH SPECIALTIES =================
+  Future<void> fetchSpecialties() async {
+    try {
+      final response = await http.get(
+        Uri.parse("http://10.0.2.2:5000/api/specialties"),
+      );
+
+      final body = jsonDecode(response.body);
+      final List data =
+          body is List ? body : body["specialties"] ?? [];
+
+      specialties =
+          data.map((e) => Specialty.fromJson(e)).toList();
+
+      setState(() {
+        filteredSpecialties = specialties;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint("ERROR: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  // ================= FETCH DOCTORS (FIXED) =================
+  Future<void> fetchAllDoctors() async {
+    try {
+      Map<int, Doctor> doctorMap = {};
+
+      for (var spec in specialties) {
+        final response = await http.get(
+          Uri.parse(
+              "http://10.0.2.2:5000/api/specialties/${spec.id}/doctors"),
+          headers: {"Authorization": "Bearer $widget.Token"},
+        );
+
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          final List data = decoded["doctors"] ?? [];
+
+          for (var item in data) {
+            final doc = Doctor.fromJson(item);
+
+            if (doctorMap.containsKey(doc.id)) {
+              doctorMap[doc.id]!.slots.addAll(doc.slots);
+            } else {
+              doctorMap[doc.id] = doc;
+            }
+          }
+        }
+      }
+
+      setState(() {
+        allDoctors = doctorMap.values.toList();
+      });
+    } catch (e) {
+      debugPrint("ERROR FETCHING DOCTORS: $e");
+    }
+  }
+
+  // ================= SEARCH =================
+  void filterSearch(String query) {
+    final q =
+        query.toLowerCase().replaceAll("dr ", "").trim();
+
+    final doctorMatches = allDoctors.where((d) {
+      return d.name
+          .toLowerCase()
+          .replaceAll("dr ", "")
+          .contains(q);
+    }).toList();
+
+    if (doctorMatches.isNotEmpty && query.isNotEmpty) {
+      setState(() {
+        filteredDoctors = doctorMatches;
+        showDoctorResults = true;
+      });
+    } else {
+      setState(() {
+        filteredSpecialties = specialties.where((spec) {
+          return spec.name.toLowerCase().contains(q);
+        }).toList();
+        showDoctorResults = false;
+      });
+    }
+  }
+
+  // ================= ICONS (RESTORED) =================
+  IconData getIcon(String name) {
+    switch (name.toLowerCase()) {
+      case "cardiology":
+        return Icons.favorite;
+      case "dermatology":
+        return Icons.spa;
+      case "orthopedics":
+        return Icons.accessibility_new;
+      case "neurology":
+        return Icons.psychology;
+      case "pediatrics":
+        return Icons.child_care;
+      case "gynecology":
+        return Icons.female;
+      case "ophthalmology":
+        return Icons.remove_red_eye;
+      case "psychiatry":
+        return Icons.psychology_alt;
+      case "dentistry":
+        return Icons.medical_services;
+      default:
+        return Icons.local_hospital;
+    }
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Top icon and title
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const SizedBox(width: 40),
-                    Row(
-                      children: [
-                        const Icon(Icons.medical_information, size: 24, color: Colors.black87),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Book",
-                          style: GoogleFonts.poppins(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blue.shade800,
-                          ),
-                        ),
-                        Text(
-                          " Consultation",
-                          style: GoogleFonts.poppins(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.blue.shade900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const CircleAvatar(
-                      backgroundColor: Colors.black12,
-                      child: Icon(Icons.person, color: Colors.black87),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Find the right doctor for your needs",
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.pink.shade800,
-                  ),
-                ),
-                Text(
-                  "Search from our network of specialists",
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.pink.shade400,
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Specialties and Doctors available chips
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(child: InfoChip(text: "10\nSpecialties")),
-                    SizedBox(width: 20),
-                    Flexible(child: InfoChip(text: "10\nDoctors\nAvailable")),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Search bar
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF9EE3E0),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2)),
-                    ],
-                  ),
-                  child: Row(
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
                     children: [
-                      const SizedBox(width: 12),
-                      const Icon(Icons.search, color: Colors.black54),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: "Search doctors by name",
-                            hintStyle: GoogleFonts.poppins(color: Colors.black54),
-                            border: InputBorder.none,
+                      // HEADER
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+  icon: const Icon(Icons.arrow_back),
+  onPressed: () {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MainScaffold(token: widget.token),
+      ),
+      (route) => false,
+    );
+  },
+),
+                          Row(
+                            children: [
+                              const Icon(Icons.medical_information,
+                                  color: Colors.blueAccent),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Book Consultation",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blueAccent,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon:
+                                const Icon(Icons.account_circle, size: 30),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const ProfilePage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // SEARCH BAR
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF9EE3E0),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.search),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: searchController,
+                                  onChanged: filterSearch,
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        "Search doctor or specialty...",
+                                    border: InputBorder.none,
+                                    hintStyle:
+                                        GoogleFonts.poppins(),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.filter_list, color: Colors.black87),
+
+                      const SizedBox(height: 20),
+
+                      // DOCTOR RESULTS (FIXED UI)
+                      if (showDoctorResults)
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics:
+                              const NeverScrollableScrollPhysics(),
+                          itemCount: filteredDoctors.length,
+                          itemBuilder: (context, index) {
+                            final doctor =
+                                filteredDoctors[index];
+
+                            return Container(
+                              margin:
+                                  const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius:
+                                    BorderRadius.circular(20),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 5)
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(doctor.name,
+                                      style:
+                                          GoogleFonts.poppins(
+                                              fontWeight:
+                                                  FontWeight.w600)),
+
+                                  Text("🏥 ${doctor.hospital}"),
+
+                                  const SizedBox(height: 6),
+
+                                  ...doctor.slots.map((slot) =>
+                                      Text(
+                                          "📅 ${slot['day']}  ⏰ ${slot['time']}")),
+
+                                  const SizedBox(height: 10),
+
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment
+                                            .spaceBetween,
+                                    children: [
+                                      Text(
+                                        doctor.isAvailable
+                                            ? "Available"
+                                            : "Not Available",
+                                        style:
+                                            GoogleFonts.poppins(
+                                          color: doctor
+                                                  .isAvailable
+                                              ? Colors.green
+                                              : Colors.red,
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed:
+                                            doctor.isAvailable
+                                                ? () {}
+                                                : null,
+                                        style:
+                                            ElevatedButton
+                                                .styleFrom(
+                                          backgroundColor:
+                                              const Color(
+                                                  0xFF9EE3E0),
+                                          foregroundColor:
+                                              Colors.black,
+                                        ),
+                                        child:
+                                            const Text("Book"),
+                                      )
+                                    ],
+                                  )
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+
+                      // SPECIALTY GRID (RESTORED WITH ICONS)
+                      if (!showDoctorResults)
+                        GridView.builder(
+                          physics:
+                              const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount:
+                              filteredSpecialties.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemBuilder: (context, index) {
+                            final specialty =
+                                filteredSpecialties[index];
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        SpecialtyDoctorsScreen(
+                                      specialtyId:
+                                          specialty.id,
+                                      specialtyName:
+                                          specialty.name,
+                                      token: widget.token,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(20),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                        color: Colors.black26,
+                                        blurRadius: 4)
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      getIcon(specialty.name),
+                                      color: Colors.black,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      specialty.name,
+                                      textAlign:
+                                          TextAlign.center,
+                                      style:
+                                          GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight:
+                                            FontWeight.bold,
+                                        color:
+                                            Colors.blueAccent,
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                      const SizedBox(height: 80),
+
+                      ElevatedButton(
                         onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                        ),
+                        child: const Text(
+                            "EMERGENCY CONSULTATION"),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  "Choose Your Specialty",
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.pink.shade800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ✅ 4. Dynamic Grid View with Navigation
-                GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: kMedicalSpecialties.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.2,
-                  ),
-                  itemBuilder: (BuildContext context, int index) {
-                    final Specialty specialty = kMedicalSpecialties[index];
-                    
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(25),
-                        onTap: () {
-                          // Passes the specialty name to the template screen
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SpecialtyDoctorsScreen(
-                                specialtyName: specialty.name,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(25),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2)),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(specialty.icon, color: Colors.blue.shade800, size: 22),
-                              const SizedBox(height: 6),
-                              Text(
-                                specialty.name,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: Colors.blue.shade800,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Emergency Button
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: Text(
-                    "EMERGENCY CONSULTATION",
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 80), 
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
 }
-

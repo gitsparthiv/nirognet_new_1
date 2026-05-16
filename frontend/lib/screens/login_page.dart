@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';   //change1- import secure storage
 import '../services/auth_service.dart'; // ✅ Import AuthService
 //import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // ✅ For storing token
+import '../main_scaffold.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -78,10 +79,14 @@ class _LoginPageState extends State<LoginPage> {
         ).showSnackBar(const SnackBar(content: Text('Login successful!')));
 
         // Navigate to home/profile
-        Navigator.pushReplacementNamed(
-          context,
-          '/main',
-        ); // ✅ Goes to MainScaffold); // or '/profile'
+        Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (_) => MainScaffold(
+      token: token,   // ✅ pass JWT here
+    ),
+  ),
+);// ✅ Goes to MainScaffold); // or '/profile'
       }
     } catch (e) {
       print('❌ Login error: $e');
